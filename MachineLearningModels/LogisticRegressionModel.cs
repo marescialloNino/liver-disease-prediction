@@ -11,6 +11,9 @@ using Accord.MachineLearning.Performance;
 using Accord.Math.Optimization.Losses;
 using Accord.MachineLearning;
 using Accord.Statistics.Analysis;
+using Accord.MachineLearning.VectorMachines.Learning;
+using Accord.MachineLearning.VectorMachines;
+using Accord.Statistics.Kernels;
 
 namespace liver_disease_prediction.MachineLearningModels
 {
@@ -58,12 +61,59 @@ namespace liver_disease_prediction.MachineLearningModels
 
         }
 
+        public void HyperparameterTuning(List<LiverPatientRecord> records)
+        {
+
+            double[][] inputs = records.Select(r => r.SelectedFeaturesArray()).ToArray();
+            int[] outputs = records.Select(r => r.Dataset).ToArray();
+            // Instantiate a new Grid Search algorithm for Kernel Support Vector Machines
+            var gridsearch = new GridSearch<LogisticRegression, double[], int>()
+            {
+                // Here we can specify the range of the parameters to be included in the search
+                ParameterRanges = new GridSearchRangeCollection()
+                {
+                new GridSearchRange("tolerance", new double[] { 1e-3, 1e-4, 1e-5 } ),
+                new GridSearchRange("maxIterations", new double[] { 50.0, 100.0, 200.0} ),
+                new GridSearchRange("regularization",   new double[] { 0.0, 0.01, 0.0001 } )
+                },
+
+                // Indicate how learning algorithms for the models should be created
+                Learner = (p) => new IterativeReweightedLeastSquares<LogisticRegression>()
+                {
+                    Tolerance = p["tolerance"],
+                    MaxIterations = (int)p["maxIterations"],
+                    Regularization = p["regularization"]
+                },
+
+                // Define how the performance of the models should be measured
+                Loss = (actual, expected, m) => new ZeroOneLoss(expected).Loss(actual)
+            };
+
+
+            // Search for the best model parameters
+            var result = gridsearch.Learn(inputs, outputs);
+
+            // Get the best SVM found during the parameter search
+            this.logisticRegression = result.BestModel;
+
+            // Get an estimate for its error:
+            double bestError = result.BestModelError;
+
+            // Get the best values found for the model parameters:
+            double bestTol = result.BestParameters["tolerance"].Value;
+            double bestMaxIt = result.BestParameters["maxIterations"].Value;
+            double bestReg = result.BestParameters["regularization"].Value;
+
+            Console.WriteLine($"BEST PARAMETERS : \n tolerance : {bestTol}\n max iterations : {bestMaxIt} \n regularization: {bestReg}");
+            Console.WriteLine($"BEST ERROR : {bestError}");
+        }
+
         public CrossValidationResult<LogisticRegression, double[], int> CrossValidation(List<LiverPatientRecord> records, int folds)
         {
             double[][] inputs = records.Select(r => r.SelectedFeaturesArray()).ToArray();
             int[] outputs = records.Select(r => r.Dataset).ToArray();
 
-            var crossvalidation = new CrossValidation<LogisticRegression, double[]>()
+            var crossValidation = new CrossValidation<LogisticRegression, double[]>()
             {
                 K = folds,
 
@@ -79,12 +129,12 @@ namespace liver_disease_prediction.MachineLearningModels
                 // Indicate how the performance of those models will be measured
                 Loss = (expected, actual, p) => new ZeroOneLoss(expected).Loss(actual),
 
-                Stratify = false, // do not force balancing of classes
+                Stratify = false, // do not force balancing of classesdcdkalòsaxj
             };
 
 
             // Compute the cross-validation
-            CrossValidationResult<LogisticRegression, double[], int> result = crossvalidation.Learn(inputs, outputs);
+            CrossValidationResult<LogisticRegression, double[], int> result = crossValidation.Learn(inputs, outputs);
 
             return result;
         }

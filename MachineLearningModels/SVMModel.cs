@@ -3,6 +3,7 @@ using Accord.Statistics.Kernels;
 using Accord.MachineLearning.VectorMachines.Learning;
 using Accord.MachineLearning.VectorMachines;
 using liver_disease_prediction.dataModels;
+using Accord.MachineLearning;
 
 namespace liver_disease_prediction.MachineLearningModels
 {
@@ -19,7 +20,7 @@ namespace liver_disease_prediction.MachineLearningModels
             var learn = new SequentialMinimalOptimization<Gaussian>()
             {
                 UseComplexityHeuristic = true,
-                UseKernelEstimation = true
+                UseKernelEstimation = true,
             };
 
             svm = learn.Learn(inputs, outputs);
@@ -46,6 +47,11 @@ namespace liver_disease_prediction.MachineLearningModels
             }
             return (double)correct / predictions.Length;
         }
+
+
+        
+
+
 
 
     }

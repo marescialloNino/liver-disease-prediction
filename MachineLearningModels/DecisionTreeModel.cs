@@ -16,6 +16,8 @@ using Accord.Math.Optimization.Losses;
 using Accord.Statistics.Analysis;
 using Accord.Statistics.Kernels;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using Accord.Statistics.Models.Regression.Fitting;
+using Accord.Statistics.Models.Regression;
 
 namespace liver_disease_prediction.MachineLearningModels
 {
@@ -56,6 +58,51 @@ namespace liver_disease_prediction.MachineLearningModels
         {
             double[][] inputs = records.Select(r => r.SelectedFeaturesArray()).ToArray();
             return tree.Decide(inputs);
+        }
+
+        public void HyperparameterTuning(List<LiverPatientRecord> records)
+        {
+
+            double[][] inputs = records.Select(r => r.SelectedFeaturesArray()).ToArray();
+            int[] outputs = records.Select(r => r.Dataset).ToArray();
+            // Instantiate a new Grid Search algorithm for Kernel Support Vector Machines
+            var gridsearch = new GridSearch<DecisionTree, double[], int>()
+            {
+                // Here we can specify the range of the parameters to be included in the search
+                ParameterRanges = new GridSearchRangeCollection()
+                {
+                new GridSearchRange("join", new double[] { 1,3,5,7,9,11,13,15,17,19}),
+                new GridSearchRange("maxHeight", new double[] { 1, 5, 10, 15, 20, 30, 50})
+                },
+
+                // Indicate how learning algorithms for the models should be created
+                Learner = (p) => new C45Learning(features)
+                {
+                    Join = (int)p["join"],
+                    MaxHeight = (int)p["maxHeight"]
+                },
+
+                // Define how the performance of the models should be measured
+                Loss = (actual, expected, m) => new ZeroOneLoss(expected).Loss(actual)
+            };
+
+
+            // Search for the best model parameters
+            var result = gridsearch.Learn(inputs, outputs);
+
+            // Get the best SVM found during the parameter search
+            this.tree = result.BestModel;
+
+            // Get an estimate for its error:
+            double bestError = result.BestModelError;
+
+            // Get the best values found for the model parameters:
+            double bestJoin = result.BestParameters["join"].Value;
+            double bestMaxHeight = result.BestParameters["maxHeight"].Value;
+
+            Console.WriteLine("DECISION TREE HYPERPARAMETER TUNING");
+            Console.WriteLine($"BEST PARAMETERS : \n Join : {bestJoin}\n max height : {bestMaxHeight} \n ");
+            Console.WriteLine($"BEST ERROR : {bestError}");
         }
 
         public CrossValidationResult<DecisionTree, double[], int> CrossValidation(List<LiverPatientRecord> records, int folds)

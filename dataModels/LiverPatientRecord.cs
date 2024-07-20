@@ -23,7 +23,7 @@ namespace liver_disease_prediction.dataModels
         // Convert to array of the selected features (via previous data exploration) excluding the label "Dataset"
         public double[] SelectedFeaturesArray()
         {
-            return new double[] { Age, Gender, TotalBilirubin, AlkalinePhosphotase, AspartateAminotransferase, TotalProtiens, AlbuminAndGlobulinRatio };
+            return new double[] { Age, Gender, DirectBilirubin, AlkalinePhosphotase, AspartateAminotransferase, TotalProtiens, AlbuminAndGlobulinRatio };
         }
     }
 }

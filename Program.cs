@@ -18,11 +18,38 @@ internal class Program
         LogisticRegressionModel logRegModel = new LogisticRegressionModel();
         logRegModel.Train(trainSet);
 
+        int[] logRegPredictions = logRegModel.Predict(testSet);
+        double logRegAccuracy = logRegModel.Validate(testSet, logRegPredictions);
+        Console.WriteLine($"Logistic Regression Accuracy: {logRegAccuracy}");
+
+        logRegModel.HyperparameterTuning(trainSet);
+
+        int[] logRegPredictionsTuned = logRegModel.Predict(testSet);
+        double logRegAccuracyTuned = logRegModel.Validate(testSet, logRegPredictionsTuned);
+        Console.WriteLine($"Tuned Logistic Regression Accuracy: {logRegAccuracyTuned}");
+
+        DecisionTreeModel treeModel = new DecisionTreeModel();
+        treeModel.Train(trainSet);
+
+        int[] treePredictions = treeModel.Predict(testSet);
+        double treeaccuracy = treeModel.Validate(testSet, treePredictions);
+        Console.WriteLine($"Decision tree Accuracy: {treeaccuracy}");
+
+        treeModel.HyperparameterTuning(trainSet);
+
+        int[] treePredictionsTuned = treeModel.Predict(testSet);
+        double treeAccuracyTuned = treeModel.Validate(testSet, treePredictionsTuned);
+        Console.WriteLine($"Tuned Decision tree Accuracy: {treeAccuracyTuned}");
+
+        /*
         DecisionTreeModel treeModel = new DecisionTreeModel();
         treeModel.Train(trainSet);
 
         SVMModel svmModel = new SVMModel();
         svmModel.Train(trainSet); 
+        */
+
+
 
         /*
         int[] logRegPredictions = logRegModel.Predict(testSet);
@@ -39,7 +66,7 @@ internal class Program
         Console.WriteLine($"SVM Accuracy: {svmAccuracy}");
         */
 
-
+        /*
         CrossValidationResult<LogisticRegression, double[], int> logCrossValResult = logRegModel.CrossValidation(trainSet, 5);
 
 
@@ -58,10 +85,7 @@ internal class Program
         Console.WriteLine($"accuracy: {logAccuracy}");
         Console.WriteLine($"error: {logError}");
 
-
-
-
-
+       
 
         CrossValidationResult<DecisionTree, double[], int> crossValResult =  treeModel.CrossValidation(trainSet, 5);
 
@@ -80,6 +104,8 @@ internal class Program
         Console.WriteLine($"validation errors: {validationErrors}");
         Console.WriteLine($"accuracy: {accuracy}");
         Console.WriteLine($"error: {error}");
+
+        */
 
     }
 }
