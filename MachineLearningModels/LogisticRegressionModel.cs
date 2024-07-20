@@ -6,6 +6,11 @@ using System.Threading.Tasks;
 using Accord.Statistics.Models.Regression.Fitting;
 using Accord.Statistics.Models.Regression;
 using liver_disease_prediction.dataModels;
+using Accord.MachineLearning.DecisionTrees;
+using Accord.MachineLearning.Performance;
+using Accord.Math.Optimization.Losses;
+using Accord.MachineLearning;
+using Accord.Statistics.Analysis;
 
 namespace liver_disease_prediction.MachineLearningModels
 {
@@ -14,7 +19,7 @@ namespace liver_disease_prediction.MachineLearningModels
         private LogisticRegression logisticRegression;
 
         public LogisticRegressionModel() {
-            logisticRegression = new LogisticRegression() { NumberOfInputs = 7};
+            logisticRegression = new LogisticRegression();
         }
 
         public void Train(List<LiverPatientRecord> records)
@@ -51,6 +56,47 @@ namespace liver_disease_prediction.MachineLearningModels
             int[] binaryPredictions = Array.ConvertAll(predictions, p => p ? 1 : 0);
             return binaryPredictions;
 
+        }
+
+        public CrossValidationResult<LogisticRegression, double[], int> CrossValidation(List<LiverPatientRecord> records, int folds)
+        {
+            double[][] inputs = records.Select(r => r.SelectedFeaturesArray()).ToArray();
+            int[] outputs = records.Select(r => r.Dataset).ToArray();
+
+            var crossvalidation = new CrossValidation<LogisticRegression, double[]>()
+            {
+                K = folds,
+
+                // Indicate how learning algorithms for the models should be created
+                Learner = (s) => new IterativeReweightedLeastSquares<LogisticRegression>()
+                {
+                    Tolerance = 1e-4,
+                    MaxIterations = 100,
+                    Regularization = 1e-5
+
+                },
+
+                // Indicate how the performance of those models will be measured
+                Loss = (expected, actual, p) => new ZeroOneLoss(expected).Loss(actual),
+
+                Stratify = false, // do not force balancing of classes
+            };
+
+
+            // Compute the cross-validation
+            CrossValidationResult<LogisticRegression, double[], int> result = crossvalidation.Learn(inputs, outputs);
+
+            return result;
+        }
+
+
+        public GeneralConfusionMatrix GenerateConfusionMatrix(List<LiverPatientRecord> records,
+                                                              CrossValidationResult<LogisticRegression, double[], int> crossValRes)
+        {
+            double[][] inputs = records.Select(r => r.SelectedFeaturesArray()).ToArray();
+            int[] outputs = records.Select(r => r.Dataset).ToArray();
+            GeneralConfusionMatrix gcm = crossValRes.ToConfusionMatrix(inputs, outputs);
+            return gcm;
         }
 
         public double Validate(List<LiverPatientRecord> records, int[] predictions)

@@ -27,7 +27,7 @@ namespace liver_disease_prediction.dataModels
             Map(m => m.Albumin).Index(8);
             Map(m => m.AlbuminAndGlobulinRatio).Index(9).Default(0.95); // handle missing values
             Map(m => m.Dataset).Index(10).TypeConverter<DatasetToIntConverter>();
-            // Map(m => m.Dataset).Index(10);
+            
         }
     }
 
