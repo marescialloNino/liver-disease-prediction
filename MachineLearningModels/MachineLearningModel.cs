@@ -13,20 +13,22 @@ namespace liver_disease_prediction.MachineLearningModels
         public abstract void Train(List<LiverPatientRecord> records);
 
         // Abstract method for making predictions
-        public abstract bool[] Predict(List<LiverPatientRecord> records);
+        public abstract int[] Predict(List<LiverPatientRecord> records);
 
         // Concrete implementation of the Validate method that can be used by all derived classes
-        public virtual double Validate(List<LiverPatientRecord> records, bool[] predictions)
+
+        public double ComputeAccuracy(List<LiverPatientRecord> records, int[] predictions)
         {
-            int correctPredictions = 0;
-            for (int i = 0; i < records.Count; i++)
+            int correct = 0;
+            int[] outputs = records.Select(r => r.Dataset).ToArray();
+            for (int i = 0; i < predictions.Length; i++)
             {
-                if ((predictions[i] && records[i].Dataset == 1) || (!predictions[i] && records[i].Dataset == 0))
+                if (predictions[i] == outputs[i])
                 {
-                    correctPredictions++;
+                    correct++;
                 }
             }
-            return (double)correctPredictions / records.Count;
+            return (double)correct / predictions.Length;
         }
     }
 }

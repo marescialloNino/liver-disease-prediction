@@ -15,32 +15,6 @@ internal class Program
         (List<LiverPatientRecord>  trainSet, List<LiverPatientRecord> testSet) = DataUtility.SplitData(records);
 
 
-        LogisticRegressionModel logRegModel = new LogisticRegressionModel();
-        logRegModel.Train(trainSet);
-
-        int[] logRegPredictions = logRegModel.Predict(testSet);
-        double logRegAccuracy = logRegModel.Validate(testSet, logRegPredictions);
-        Console.WriteLine($"Logistic Regression Accuracy: {logRegAccuracy}");
-
-        logRegModel.HyperparameterTuning(trainSet);
-
-        int[] logRegPredictionsTuned = logRegModel.Predict(testSet);
-        double logRegAccuracyTuned = logRegModel.Validate(testSet, logRegPredictionsTuned);
-        Console.WriteLine($"Tuned Logistic Regression Accuracy: {logRegAccuracyTuned}");
-
-        DecisionTreeModel treeModel = new DecisionTreeModel();
-        treeModel.Train(trainSet);
-
-        int[] treePredictions = treeModel.Predict(testSet);
-        double treeaccuracy = treeModel.Validate(testSet, treePredictions);
-        Console.WriteLine($"Decision tree Accuracy: {treeaccuracy}");
-
-        treeModel.HyperparameterTuning(trainSet);
-
-        int[] treePredictionsTuned = treeModel.Predict(testSet);
-        double treeAccuracyTuned = treeModel.Validate(testSet, treePredictionsTuned);
-        Console.WriteLine($"Tuned Decision tree Accuracy: {treeAccuracyTuned}");
-
         /*
         DecisionTreeModel treeModel = new DecisionTreeModel();
         treeModel.Train(trainSet);
@@ -48,7 +22,32 @@ internal class Program
         SVMModel svmModel = new SVMModel();
         svmModel.Train(trainSet); 
         */
+        DecisionTreeModel treeModel = new DecisionTreeModel();
+        treeModel.Train(trainSet);
 
+        int[] treePredictions = treeModel.Predict(testSet);
+
+        double treeaccuracy = treeModel.ComputeAccuracy(testSet, treePredictions);
+        Console.WriteLine($"Decision tree Accuracy: {treeaccuracy}");
+
+        CrossValidationResult<DecisionTree, double[], int> crossValResult = treeModel.CrossValidation(trainSet, 5);
+
+
+        // Finally, access the measured performance.
+        double trainingErrors = crossValResult.Training.Mean; // should be 0.30606060606060609 (+/- var. 0.083498622589531682)
+        double validationErrors = crossValResult.Validation.Mean; // should be 0.3666666666666667 (+/- var. 0.023333333333333334)
+
+        // If desired, compute an aggregate confusion matrix for the validation sets:
+        GeneralConfusionMatrix gcm = treeModel.GenerateConfusionMatrix(trainSet, crossValResult);
+        double accuracy = gcm.Accuracy;
+        double error = gcm.Error;
+
+        Console.WriteLine("DECISION TREE CROSS VALIDATION RESULTS:");
+        Console.WriteLine($"confusion matrix : {gcm}");
+        Console.WriteLine($"training errors: {trainingErrors}");
+        Console.WriteLine($"validation errors: {validationErrors}");
+        Console.WriteLine($"accuracy: {accuracy}");
+        Console.WriteLine($"error: {error}");
 
 
         /*

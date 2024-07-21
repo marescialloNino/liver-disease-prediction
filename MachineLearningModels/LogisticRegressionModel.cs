@@ -66,7 +66,7 @@ namespace liver_disease_prediction.MachineLearningModels
 
             double[][] inputs = records.Select(r => r.SelectedFeaturesArray()).ToArray();
             int[] outputs = records.Select(r => r.Dataset).ToArray();
-            // Instantiate a new Grid Search algorithm for Kernel Support Vector Machines
+            
             var gridsearch = new GridSearch<LogisticRegression, double[], int>()
             {
                 // Here we can specify the range of the parameters to be included in the search
@@ -93,7 +93,7 @@ namespace liver_disease_prediction.MachineLearningModels
             // Search for the best model parameters
             var result = gridsearch.Learn(inputs, outputs);
 
-            // Get the best SVM found during the parameter search
+            // Get the best model found during the parameter search
             this.logisticRegression = result.BestModel;
 
             // Get an estimate for its error:
@@ -149,7 +149,7 @@ namespace liver_disease_prediction.MachineLearningModels
             return gcm;
         }
 
-        public double Validate(List<LiverPatientRecord> records, int[] predictions)
+        public double ComputeAccuracy(List<LiverPatientRecord> records, int[] predictions)
         {
             int i = 0;
             double correctPredictions = 0;

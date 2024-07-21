@@ -70,6 +70,13 @@ namespace liver_disease_prediction.utility
             return fieldData;
         }
 
+        public static (double[][], int[]) recordsToInputsOutputs(List<LiverPatientRecord> records)
+        {
+            double[][] inputs = records.Select(r => r.SelectedFeaturesArray()).ToArray();
+            int[] outputs = records.Select(r => r.Dataset).ToArray();
+            return (inputs, outputs);
+        }
+
         public static (List<LiverPatientRecord>, List<LiverPatientRecord>) SplitData(List<LiverPatientRecord> data, double trainSize = 0.8)
         {
 
