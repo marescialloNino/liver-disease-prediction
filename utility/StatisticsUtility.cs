@@ -3,16 +3,29 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using liver_disease_prediction.dataModels;
 
 namespace liver_disease_prediction.utility
 {
     public static class StatisticsUtility
     {
+
+        /// <summary>
+        /// Calculates the mean of a list of values.
+        /// </summary>
+        /// <param name="values">List of double values.</param>
+        /// <returns>The mean of the list or 0 if the list is empty.</returns>
         public static double CalculateMean(List<double> values)
         {
             return values.Count == 0 ? 0 : values.Average();
         }
 
+
+        /// <summary>
+        /// Calculates the median of a list of values.
+        /// </summary>
+        /// <param name="values">List of double values.</param>
+        /// <returns>The median of the list or 0 if the list is empty.</returns>
         public static double CalculateMedian(List<double> values)
         {
             if (values.Count == 0)
@@ -30,6 +43,12 @@ namespace liver_disease_prediction.utility
             }
         }
 
+
+        /// <summary>
+        /// Calculates the standard deviation of a list of values.
+        /// </summary>
+        /// <param name="values">List of double values.</param>
+        /// <returns>The standard deviation of the list or 0 if the list is empty.</returns>
         public static double CalculateStandardDeviation(List<double> values)
         {
             if (values.Count == 0)
@@ -40,9 +59,16 @@ namespace liver_disease_prediction.utility
             return Math.Sqrt(sum / values.Count);
         }
 
-        public static double[,] CalculateCorrelationMatrixForLiverPatientRecords(Dictionary<string, List<double>> recordsDict)
+
+        /// <summary>
+        /// Calculates the correlation matrix for fields from liver patient records.
+        /// </summary>
+        /// <param name="records">List of LiverPatientRecord object.</param>
+        /// <returns>A 2D array representing the correlation matrix.</returns>
+        public static double[,] CalculateCorrelationMatrixForLiverPatientRecords(List<LiverPatientRecord> records)
         {
 
+            Dictionary<string, List<double>> recordsDict =  DataUtility.ExtractFieldDataAsDoubles(records);
             List<List<double>> columns = new List<List<double>>
         {
             recordsDict["Age"], recordsDict["Gender"],recordsDict["TotalBilirubin"],recordsDict["DirectBilirubin"],recordsDict["AlkalinePhosphotase"],
@@ -52,6 +78,12 @@ namespace liver_disease_prediction.utility
             return CalculateCorrelationMatrix(columns);
         }
 
+
+        /// <summary>
+        /// Calculates the correlation matrix from a list of columns of data.
+        /// </summary>
+        /// <param name="columns">List of lists, each containing data for a specific variable.</param>
+        /// <returns>A 2D array representing the correlation matrix.</returns>
         public static double[,] CalculateCorrelationMatrix(List<List<double>> columns)
         {
             int n = columns.Count;
@@ -77,6 +109,13 @@ namespace liver_disease_prediction.utility
             return correlationMatrix;
         }
 
+
+        /// <summary>
+        /// Calculates the correlation coefficient between two lists of values.
+        /// </summary>
+        /// <param name="x">First list of double values.</param>
+        /// <param name="y">Second list of double values.</param>
+        /// <returns>The correlation coefficient between the two lists.</returns>
         public static double CalculateCorrelation(List<double> x, List<double> y)
         {
             if (x.Count != y.Count || x.Count == 0)

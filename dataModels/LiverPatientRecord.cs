@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿
 
 namespace liver_disease_prediction.dataModels
 {
@@ -17,10 +13,10 @@ namespace liver_disease_prediction.dataModels
         public int AspartateAminotransferase { get; set; }
         public double TotalProtiens { get; set; }
         public double Albumin { get; set; }
-        public double AlbuminAndGlobulinRatio { get; set; } // some values in the dataset might not be present
-        public int Dataset { get; set; } // 1: has disease, 2: no disease
+        public double AlbuminAndGlobulinRatio { get; set; } 
+        public int Dataset { get; set; }
 
-        // Convert to array of the selected features (via previous data exploration) excluding the label "Dataset"
+        // Convert to array of the selected features (chosen via previous data exploration) excluding the label "Dataset"
         public double[] SelectedFeaturesArray()
         {
             return new double[] { Age, Gender, DirectBilirubin, AlkalinePhosphotase, AspartateAminotransferase, TotalProtiens, AlbuminAndGlobulinRatio };

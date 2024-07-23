@@ -1,167 +1,164 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿
 using Accord.Statistics.Models.Regression.Fitting;
 using Accord.Statistics.Models.Regression;
 using liver_disease_prediction.dataModels;
-using Accord.MachineLearning.DecisionTrees;
 using Accord.MachineLearning.Performance;
 using Accord.Math.Optimization.Losses;
 using Accord.MachineLearning;
 using Accord.Statistics.Analysis;
-using Accord.MachineLearning.VectorMachines.Learning;
-using Accord.MachineLearning.VectorMachines;
-using Accord.Statistics.Kernels;
+using liver_disease_prediction.utility;
+using System.Collections.Generic;
+
 
 namespace liver_disease_prediction.MachineLearningModels
 {
-    public class LogisticRegressionModel
+    public class LogisticRegressionModel:MachineLearningModel
     {
-        private LogisticRegression logisticRegression;
+        private LogisticRegression LogRegModel { get; set; }
 
-        public LogisticRegressionModel() {
-            logisticRegression = new LogisticRegression();
+
+        /// <summary>
+        /// Constructor that initializes a new instance of the LogisticRegression model.
+        /// </summary>
+        public LogisticRegressionModel()
+        {
+            LogRegModel = new LogisticRegression() { };
         }
 
-        public void Train(List<LiverPatientRecord> records)
+
+        /// <summary>
+        /// Trains the logistic regression model using a list of liver patient records.
+        /// </summary>
+        /// <param name="records">List of liver patient records to train the model.</param>
+        public void Train(List<LiverPatientRecord> records, double regularization, double intercept)
         {
+            (double[][] inputs, int[] outputs) = DataUtility.recordsToInputsOutputs(records);
 
-            double[][] inputs = records.Select(r => r.SelectedFeaturesArray()).ToArray();
-            int[] outputs = records.Select(r => r.Dataset).ToArray();
+            LogRegModel.Intercept = intercept;
 
-            var teacher = new IterativeReweightedLeastSquares<LogisticRegression>()
+            IterativeReweightedLeastSquares<LogisticRegression> teacher = new IterativeReweightedLeastSquares<LogisticRegression>()
             {
-                Tolerance = 1e-4,  
-                MaxIterations = 100,  
-                Regularization = 1e-5
-                
+                Regularization = regularization,
+                MaxIterations = 100
             };
 
-            logisticRegression = teacher.Learn(inputs, outputs);         
 
-            // After training, inspect the coefficients
-            Console.WriteLine("Coefficients:");
-            for (int i = 0; i < logisticRegression.Coefficients.Length; i++)
-            {
-                Console.WriteLine($"Coefficient for input {i}: {logisticRegression.Coefficients[i]}");
-            }
+            LogRegModel = teacher.Learn(inputs, outputs);
 
-            
-            Console.WriteLine($"Has Converged? : {teacher.HasConverged}");
         }
 
-        public int[] Predict(List<LiverPatientRecord> records)
+
+        /// <summary>
+        /// Predicts the outcomes for a given list of liver patient records.
+        /// </summary>
+        /// <param name="records">The records for which predictions are to be made.</param>
+        /// <returns>An array of predictions where 1 indicates presence of disease and 0 indicates absence.</returns>
+        public override int[] Predict(List<LiverPatientRecord> records)
         {
-            double[][] inputs = records.Select(r => r.SelectedFeaturesArray()).ToArray();
-            bool[] predictions = logisticRegression.Decide(inputs);
+            (double[][] inputs, _) = DataUtility.recordsToInputsOutputs(records);
+            bool[] predictions = LogRegModel.Decide(inputs);
             int[] binaryPredictions = Array.ConvertAll(predictions, p => p ? 1 : 0);
             return binaryPredictions;
 
         }
 
-        public void HyperparameterTuning(List<LiverPatientRecord> records)
+
+        /// Performs k-fold cross-validation with hyperparameter tuning and evaluates model performance using a confusion matrix.
+        /// </summary>
+        /// <param name="folds">A list of tuples each containing a training set and a validation set.</param>
+        /// <param name="parameterRanges">Dictionary of parameters and their ranges to test.</param>
+        /// <returns>The best parameter combination along with averaged performance metrics.</returns>
+        public (double bestRegularization, double bestIntercept, double[] bestMetrics) CrossValidation(
+            List<List<LiverPatientRecord>> foldedTrainSet,
+            Dictionary<string, double[]> parameterRanges)
         {
 
-            double[][] inputs = records.Select(r => r.SelectedFeaturesArray()).ToArray();
-            int[] outputs = records.Select(r => r.Dataset).ToArray();
+            List<List<LiverPatientRecord>> tempTrainingSetsList = new List<List<LiverPatientRecord>>();
+            List<List<LiverPatientRecord>> tempValidationSetsList = new List<List<LiverPatientRecord>>();
             
-            var gridsearch = new GridSearch<LogisticRegression, double[], int>()
+
+            for (int i = 0; i < foldedTrainSet.Count; i++)
             {
-                // Here we can specify the range of the parameters to be included in the search
-                ParameterRanges = new GridSearchRangeCollection()
-                {
-                new GridSearchRange("tolerance", new double[] { 1e-3, 1e-4, 1e-5 } ),
-                new GridSearchRange("maxIterations", new double[] { 50.0, 100.0, 200.0} ),
-                new GridSearchRange("regularization",   new double[] { 0.0, 0.01, 0.0001 } )
-                },
 
-                // Indicate how learning algorithms for the models should be created
-                Learner = (p) => new IterativeReweightedLeastSquares<LogisticRegression>()
-                {
-                    Tolerance = p["tolerance"],
-                    MaxIterations = (int)p["maxIterations"],
-                    Regularization = p["regularization"]
-                },
+                // Get all lists except the one at index i
+                List<LiverPatientRecord> tempTrainSet = foldedTrainSet
+                                            .Where((_, index) => index != i) // Filter out the current index
+                                            .SelectMany(x => x) // Flatten the lists into a single list
+                                            .ToList();
+                tempTrainingSetsList.Add(tempTrainSet);
 
-                // Define how the performance of the models should be measured
-                Loss = (actual, expected, m) => new ZeroOneLoss(expected).Loss(actual)
-            };
-
-
-            // Search for the best model parameters
-            var result = gridsearch.Learn(inputs, outputs);
-
-            // Get the best model found during the parameter search
-            this.logisticRegression = result.BestModel;
-
-            // Get an estimate for its error:
-            double bestError = result.BestModelError;
-
-            // Get the best values found for the model parameters:
-            double bestTol = result.BestParameters["tolerance"].Value;
-            double bestMaxIt = result.BestParameters["maxIterations"].Value;
-            double bestReg = result.BestParameters["regularization"].Value;
-
-            Console.WriteLine($"BEST PARAMETERS : \n tolerance : {bestTol}\n max iterations : {bestMaxIt} \n regularization: {bestReg}");
-            Console.WriteLine($"BEST ERROR : {bestError}");
-        }
-
-        public CrossValidationResult<LogisticRegression, double[], int> CrossValidation(List<LiverPatientRecord> records, int folds)
-        {
-            double[][] inputs = records.Select(r => r.SelectedFeaturesArray()).ToArray();
-            int[] outputs = records.Select(r => r.Dataset).ToArray();
-
-            var crossValidation = new CrossValidation<LogisticRegression, double[]>()
-            {
-                K = folds,
-
-                // Indicate how learning algorithms for the models should be created
-                Learner = (s) => new IterativeReweightedLeastSquares<LogisticRegression>()
-                {
-                    Tolerance = 1e-4,
-                    MaxIterations = 100,
-                    Regularization = 1e-5
-
-                },
-
-                // Indicate how the performance of those models will be measured
-                Loss = (expected, actual, p) => new ZeroOneLoss(expected).Loss(actual),
-
-                Stratify = false, // do not force balancing of classesdcdkalòsaxj
-            };
-
-
-            // Compute the cross-validation
-            CrossValidationResult<LogisticRegression, double[], int> result = crossValidation.Learn(inputs, outputs);
-
-            return result;
-        }
-
-
-        public GeneralConfusionMatrix GenerateConfusionMatrix(List<LiverPatientRecord> records,
-                                                              CrossValidationResult<LogisticRegression, double[], int> crossValRes)
-        {
-            double[][] inputs = records.Select(r => r.SelectedFeaturesArray()).ToArray();
-            int[] outputs = records.Select(r => r.Dataset).ToArray();
-            GeneralConfusionMatrix gcm = crossValRes.ToConfusionMatrix(inputs, outputs);
-            return gcm;
-        }
-
-        public double ComputeAccuracy(List<LiverPatientRecord> records, int[] predictions)
-        {
-            int i = 0;
-            double correctPredictions = 0;
-            int[] outputs = records.Select(r => r.Dataset).ToArray();
-            foreach (LiverPatientRecord record in records)
-            {
-                if (outputs[i] == predictions[i])
-                    correctPredictions++;
-                i++;
+                List<LiverPatientRecord> tempValidationSet = foldedTrainSet[i];
+                tempValidationSetsList.Add(tempValidationSet);
+         
             }
-            return (double)correctPredictions / records.Count;
-        }
 
+            double bestAccuracy = 0.0;
+            double bestPrecision = 0.0;
+            double bestRecall = 0.0;
+            double bestF1 = 0.0;
+            double bestRegularization = 0;
+            double bestIntercept = 0;
+
+            foreach (double regularization in parameterRanges["Regularization"])
+            {
+                foreach (int intercept in parameterRanges["Intercept"])
+                {
+                    List<double> accuracies = new List<double>();
+                    List<double> precisions = new List<double>();
+                    List<double> recalls = new List<double>();
+                    List<double> f1Scores = new List<double>();
+
+                    for (int j = 0; j < tempTrainingSetsList.Count; j++)
+                    {
+                        Train(tempTrainingSetsList[j], regularization, intercept);
+
+                        int[] validationSetPredictions = Predict(tempValidationSetsList[j]);
+                        (_, int[] validationSetOutputs) = DataUtility.recordsToInputsOutputs(tempValidationSetsList[j]);
+
+
+                        (double accuracy, 
+                        double precision,
+                        double recall,
+                        double f1score) = MachineLearningModel.ComputeMetrics(tempValidationSetsList[j],validationSetPredictions);
+                        accuracies.Add(accuracy);
+                        precisions.Add(precision);
+                        recalls.Add(recall);
+                        f1Scores.Add(f1score);
+                    }
+
+                    double averageAccuracy = accuracies.Average();
+                    double averagePrecision = precisions.Average();
+                    double averageRecall = recalls.Average();
+                    double averageF1score = f1Scores.Average();
+
+
+                    if (averageF1score > bestF1)
+                    {
+                        bestAccuracy = averageAccuracy;  
+                        bestPrecision = averagePrecision;
+                        bestRecall = averageRecall;
+                        bestF1 = averageF1score;
+                        bestRegularization = regularization;
+                        bestIntercept = intercept;
+                    }
+
+                }
+
+                
+            }
+            double[] bestMetrics = new double[] { bestAccuracy, bestPrecision, bestRecall, bestF1 };
+
+            Console.WriteLine("\nBest parameters after cross validation are:\n");
+            Console.WriteLine($"Regularization: {bestRegularization}");
+            Console.WriteLine($"Intercept: {bestIntercept}");
+            Console.WriteLine("\nTraining set Metrics for best parameters:\n");
+            Console.WriteLine($"Accuracy: {bestAccuracy} , Precision: {bestPrecision}");
+            Console.WriteLine($"Recall: {bestRecall}, F1 score: {bestF1}");
+
+
+            return (bestRegularization, bestIntercept, bestMetrics);
+            }
+
+
+        }
     }
-}

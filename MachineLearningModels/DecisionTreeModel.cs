@@ -1,38 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿
 using Accord.MachineLearning.DecisionTrees;
 using Accord.MachineLearning.DecisionTrees.Learning;
-using Accord.Statistics.Filters;
-using Accord.MachineLearning.DecisionTrees.Rules;
-using System.Threading.Tasks;
 using liver_disease_prediction.dataModels;
 using Accord.MachineLearning;
 using Accord.MachineLearning.Performance;
-using Accord.MachineLearning.VectorMachines.Learning;
-using Accord.MachineLearning.VectorMachines;
 using Accord.Math.Optimization.Losses;
 using Accord.Statistics.Analysis;
-using Accord.Statistics.Kernels;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using Accord.Statistics.Models.Regression.Fitting;
-using Accord.Statistics.Models.Regression;
 using liver_disease_prediction.utility;
 
 namespace liver_disease_prediction.MachineLearningModels
 {
 
 
-    public class DecisionTreeModel: MachineLearningModel
+    public class DecisionTreeModel : MachineLearningModel
     {
-        private DecisionTree tree {  get; set; }
-        private DecisionVariable[] features {  get; set; }
-        
-        
+        private DecisionTree Tree { get; set; }
+        private DecisionVariable[] Features { get; set; }
+
+
         public DecisionTreeModel()
         {
-            this.features = new DecisionVariable[]
+            Features = new DecisionVariable[]
                             {
                                 new DecisionVariable("Age", DecisionVariableKind.Continuous),
                                 new DecisionVariable("Gender", 2),
@@ -42,104 +30,128 @@ namespace liver_disease_prediction.MachineLearningModels
                                 new DecisionVariable("Total Protiens", DecisionVariableKind.Continuous),
                                 new DecisionVariable("Albumin and Globulin Ratio", DecisionVariableKind.Continuous)
                             };
-            this.tree = new DecisionTree(features, 2);
+            Tree = new DecisionTree(Features, 2);
         }
 
-        public override void Train(List<LiverPatientRecord> records)
+        public void Train(List<LiverPatientRecord> records, double join, double maxHeight)
         {
-            // Create an instance of the C4.5 learning algorithm
-            C45Learning teacher = new C45Learning(features);
 
             (double[][] inputs, int[] outputs) = DataUtility.recordsToInputsOutputs(records);
 
+            // Create an instance of the C4.5 learning algorithm
+            C45Learning teacher = new C45Learning(Features)
+            {
+                Join = (int)join,
+                MaxHeight = (int)maxHeight
+            };
 
             // Use the learning algorithm to induce the tree
-            tree = teacher.Learn(inputs, outputs);
+            Tree = teacher.Learn(inputs, outputs);
         }
 
         public override int[] Predict(List<LiverPatientRecord> records)
         {
-            (double[][] inputs, _ ) = DataUtility.recordsToInputsOutputs(records);
-            return tree.Decide(inputs);
+            (double[][] inputs, _) = DataUtility.recordsToInputsOutputs(records);
+            return Tree.Decide(inputs);
         }
 
-        public void HyperparameterTuning(List<LiverPatientRecord> records)
+
+        /// Performs k-fold cross-validation with hyperparameter tuning and evaluates model performance using a confusion matrix.
+        /// </summary>
+        /// <param name="folds">A list of lists each containing the k folds of the training set.</param>
+        /// <param name="parameterRanges">Dictionary of parameters and their ranges to test.</param>
+        /// <returns>The best parameter combination along with averaged performance metrics on training.</returns>
+        public (double bestJoin, double bestMaxHeight, double[] bestMetrics) CrossValidation(
+            List<List<LiverPatientRecord>> foldedTrainSet,
+            Dictionary<string, double[]> parameterRanges)
         {
 
-            (double[][] inputs, int[] outputs) = DataUtility.recordsToInputsOutputs(records);
-            // Instantiate a new Grid Search algorithm for Kernel Support Vector Machines
-            var gridsearch = new GridSearch<DecisionTree, double[], int>()
+            List<List<LiverPatientRecord>> tempTrainingSetsList = new List<List<LiverPatientRecord>>();
+            List<List<LiverPatientRecord>> tempValidationSetsList = new List<List<LiverPatientRecord>>();
+
+
+            for (int i = 0; i < foldedTrainSet.Count; i++)
             {
-                // Here we can specify the range of the parameters to be included in the search
-                ParameterRanges = new GridSearchRangeCollection()
-                {
-                new GridSearchRange("join", new double[] { 1,3,5,7,9,11,13,15,17,19}),
-                new GridSearchRange("maxHeight", new double[] { 1, 5, 10, 15, 20, 30, 50})
-                },
 
-                // Indicate how learning algorithms for the models should be created
-                Learner = (p) => new C45Learning(features)
-                {
-                    Join = (int)p["join"],
-                    MaxHeight = (int)p["maxHeight"]
-                },
-                // Define how the performance of the models should be measured
-                Loss = (actual, expected, m) => new ZeroOneLoss(expected).Loss(actual)
+                // Get all lists except the one at index i
+                List<LiverPatientRecord> tempTrainSet = foldedTrainSet
+                                            .Where((_, index) => index != i) // Filter out the current index
+                                            .SelectMany(x => x) // Flatten the lists into a single list
+                                            .ToList();
+                tempTrainingSetsList.Add(tempTrainSet);
 
-            };
+                List<LiverPatientRecord> tempValidationSet = foldedTrainSet[i];
+                tempValidationSetsList.Add(tempValidationSet);
 
+            }
 
-            // Search for the best model parameters
-            var result = gridsearch.Learn(inputs, outputs);
+            double bestAccuracy = 0.0;
+            double bestPrecision = 0.0;
+            double bestRecall = 0.0;
+            double bestF1 = 0.0;
+            double bestJoin = 0.0;
+            double bestMaxHeight = 0.0;
 
-            // Get the best SVM found during the parameter search
-            this.tree = result.BestModel;
-
-            // Get an estimate for its error:
-            double bestError = result.BestModelError;
-
-            // Get the best values found for the model parameters:
-            double bestJoin = result.BestParameters["join"].Value;
-            double bestMaxHeight = result.BestParameters["maxHeight"].Value;
-
-            Console.WriteLine("DECISION TREE HYPERPARAMETER TUNING");
-            Console.WriteLine($"BEST PARAMETERS : \n Join : {bestJoin}\n max height : {bestMaxHeight} \n ");
-            Console.WriteLine($"BEST ERROR : {bestError}");
-        }
-
-        public CrossValidationResult<DecisionTree, double[], int> CrossValidation(List<LiverPatientRecord> records, int folds)
-        {
-            (double[][] inputs, int[] outputs) = DataUtility.recordsToInputsOutputs(records);
-
-            var crossvalidation = new CrossValidation<DecisionTree, double[]>()
+            foreach (double join in parameterRanges["Join"])
             {
-                K = folds, 
+                foreach (double maxHeight in parameterRanges["MaxHeight"])
+                {
+                    List<double> accuracies = new List<double>();
+                    List<double> precisions = new List<double>();
+                    List<double> recalls = new List<double>();
+                    List<double> f1Scores = new List<double>();
 
-                // Indicate how learning algorithms for the models should be created
-                Learner = (s) => new C45Learning(features),
+                    for (int j = 0; j < tempTrainingSetsList.Count; j++)
+                    {
+                        Train(tempTrainingSetsList[j], join, maxHeight);
 
-                // Indicate how the performance of those models will be measured
-                Loss = (expected, actual, p) => new ZeroOneLoss(expected).Loss(actual),
-
-                Stratify = false, // do not force balancing of classes
-            };
+                        int[] validationSetPredictions = Predict(tempValidationSetsList[j]);
+                        (_, int[] validationSetOutputs) = DataUtility.recordsToInputsOutputs(tempValidationSetsList[j]);
 
 
-            // Compute the cross-validation
-            CrossValidationResult<DecisionTree, double[], int> result = crossvalidation.Learn(inputs, outputs);
+                        (double accuracy,
+                        double precision,
+                        double recall,
+                        double f1score) = MachineLearningModel.ComputeMetrics(tempValidationSetsList[j], validationSetPredictions);
+                        accuracies.Add(accuracy);
+                        precisions.Add(precision);
+                        recalls.Add(recall);
+                        f1Scores.Add(f1score);
+                    }
 
-            return result;
+                    double averageAccuracy = accuracies.Average();
+                    double averagePrecision = precisions.Average();
+                    double averageRecall = recalls.Average();
+                    double averageF1score = f1Scores.Average();
+
+
+                    if (averageF1score > bestF1)
+                    {
+                        bestAccuracy = averageAccuracy;
+                        bestPrecision = averagePrecision;
+                        bestRecall = averageRecall;
+                        bestF1 = averageF1score;
+                        bestJoin = join;
+                        bestMaxHeight = maxHeight;
+                    }
+
+                }
+
+
+            }
+            double[] bestMetrics = new double[] { bestAccuracy, bestPrecision, bestRecall, bestF1 };
+
+            Console.WriteLine("\nBest parameters after cross validation are:\n");
+            Console.WriteLine($"Join: {bestJoin}");
+            Console.WriteLine($"MaxHeight: {bestMaxHeight}");
+            Console.WriteLine("\nTraining set Metrics for best parameters:\n");
+            Console.WriteLine($"Accuracy: {bestAccuracy} , Precision: {bestPrecision}");
+            Console.WriteLine($"Recall: {bestRecall}, F1 score: {bestF1}");
+
+
+            return (bestJoin, bestMaxHeight, bestMetrics);
         }
 
-
-        public GeneralConfusionMatrix GenerateConfusionMatrix(List<LiverPatientRecord> records, 
-                                                              CrossValidationResult<DecisionTree, double[], int> crossValRes)
-        {
-            (double[][] inputs, int[] outputs) = DataUtility.recordsToInputsOutputs(records);
-            GeneralConfusionMatrix gcm = crossValRes.ToConfusionMatrix(inputs, outputs);
-            return gcm;
-        }
-        
 
     }
 }

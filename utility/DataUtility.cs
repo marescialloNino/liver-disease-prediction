@@ -1,11 +1,6 @@
 ﻿using CsvHelper;
 using CsvHelper.Configuration;
 using System.Globalization;
-using System.IO;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System;
 using liver_disease_prediction.dataModels;
 
 
@@ -13,6 +8,12 @@ namespace liver_disease_prediction.utility
 {
     public static class DataUtility
     {
+
+        /// <summary>
+        /// Loads liver patient records from a CSV file.
+        /// </summary>
+        /// <param name="path">Path to the CSV file.</param>
+        /// <returns>List of LiverPatientRecord objects populated from the CSV data.</returns>
         public static List<LiverPatientRecord> LoadDataFromCsv(string path)
         {
             string filePath = path;
@@ -22,26 +23,34 @@ namespace liver_disease_prediction.utility
             };
 
             using (StreamReader reader = new StreamReader(filePath))
+
             using (CsvReader csv = new CsvReader(reader, config))
             {
                 csv.Context.RegisterClassMap<LiverPatientRecordMap>();
-                var records = csv.GetRecords<LiverPatientRecord>();
+                List<LiverPatientRecord> records = csv.GetRecords<LiverPatientRecord>().ToList();
 
-                return records.ToList();
+                return records;
             }
         }
 
-        // useful for data vizualization
+        /// <summary>
+        /// Extracts and organizes feature data from liver patient records into a dictionary.
+        /// This helps in managing data for visualization and analysis.
+        /// </summary>
+        /// <param name="recordsList">List of LiverPatientRecord objects.</param>
+        /// <param name="genderFilter">Value of the gender field for which the records are filtered (0:male, 1:female) (default = null).</param>
+        /// <param name="diseaseFilter">Value of the dataset field for which the records are filtered (0:no disease, 1:disease) (default = null).</param>
+        /// <returns>Dictionary with keys as feature names and values as lists of feature data.</returns>
         public static Dictionary<string, List<double>> ExtractFieldDataAsDoubles(List<LiverPatientRecord> recordsList,
                                                                                 int? genderFilter = null,
                                                                                 int? diseaseFilter = null)
-
         {
             // Apply filters only if they are not null
             List<LiverPatientRecord> records = recordsList
-                .Where(r => (!genderFilter.HasValue || r.Gender == genderFilter.Value) &&
-                            (!diseaseFilter.HasValue || r.Dataset == diseaseFilter.Value))
-                .ToList();
+                                                .Where(r => (!genderFilter.HasValue || r.Gender == genderFilter.Value) &&
+                                                            (!diseaseFilter.HasValue || r.Dataset == diseaseFilter.Value))
+                                                .ToList();
+
             Dictionary<string, List<double>> fieldData = new Dictionary<string, List<double>>();
 
             List<double> ageData = records.Select(r => (double)r.Age).ToList();
@@ -70,6 +79,12 @@ namespace liver_disease_prediction.utility
             return fieldData;
         }
 
+
+        /// <summary>
+        /// Converts a list of LiverPatientRecord objects to feature arrays and output arrays.
+        /// </summary>
+        /// <param name="records">List of LiverPatientRecord objects.</param>
+        /// <returns>Tuple containing arrays of feature inputs and corresponding output labels.</returns>
         public static (double[][], int[]) recordsToInputsOutputs(List<LiverPatientRecord> records)
         {
             double[][] inputs = records.Select(r => r.SelectedFeaturesArray()).ToArray();
@@ -77,12 +92,18 @@ namespace liver_disease_prediction.utility
             return (inputs, outputs);
         }
 
+
+        /// <summary>
+        /// Splits data into a training set and a testing set based on a specified training size proportion.
+        /// </summary>
+        /// <param name="data">List of LiverPatientRecord objects to be split.</param>
+        /// <param name="trainSize">Proportion of the data to be used for training (default is 0.8).</param>
+        /// <returns>Tuple of training set and testing set.</returns>
         public static (List<LiverPatientRecord>, List<LiverPatientRecord>) SplitData(List<LiverPatientRecord> data, double trainSize = 0.8)
         {
-
             Random random = new Random();
             // Shuffle the list randomly
-            var shuffledData = data.OrderBy(x => random.Next()).ToList();
+            List<LiverPatientRecord> shuffledData = data.OrderBy(x => random.Next()).ToList();
 
             // Calculate split index
             int splitIndex = (int)(trainSize * shuffledData.Count);
@@ -94,36 +115,42 @@ namespace liver_disease_prediction.utility
             return (trainingSet, testingSet);
         }
 
-
-        public static double[][] ScaleFeatures(List<LiverPatientRecord> records)
+        /// <summary>
+        /// Splits data into a specified number of folds for k-fold cross-validation.
+        /// </summary>
+        /// <param name="data">List of LiverPatientRecord objects to be split into folds.</param>
+        /// <param name="k">The number of folds to create (default is 5).</param>
+        /// <returns>List of folds, where each fold is a list of LiverPatientRecord objects.</returns>
+        public static List<List<LiverPatientRecord>> SplitDataIntoFolds(List<LiverPatientRecord> data, int k = 5)
         {
-            double[][] inputs = records.Select(r => r.SelectedFeaturesArray()).ToArray();
-            int numFeatures = inputs[0].Length;
+            Random random = new Random();
+            // Shuffle the list randomly
+            List<LiverPatientRecord> shuffledData = data.OrderBy(x => random.Next()).ToList();
 
-            // Assume gender is at index 1, adjust if different
-            int genderIndex = 1;
+            // Create the list of folds
+            List<List<LiverPatientRecord>> folds = new List<List<LiverPatientRecord>>();
 
-            double[] means = new double[numFeatures];
-            double[] stdDevs = new double[numFeatures];
+            // Calculate the number of elements per fold
+            int totalItems = data.Count;
+            int baseFoldSize = (int)totalItems / k;
+            int remainder = totalItems % k;
 
-            // Calculate means and standard deviations, skipping binary gender
-            for (int j = 0; j < numFeatures; j++)
+            int start = 0;
+            for (int i = 0; i < k; i++)
             {
-                if (j != genderIndex)
+                int foldSize = baseFoldSize + (remainder-- > 0 ? 1 : 0); // Distribute the remainder among the first few folds
+                if (start + foldSize > totalItems)
                 {
-                    means[j] = inputs.Average(row => row[j]);
-                    stdDevs[j] = Math.Sqrt(inputs.Sum(row => Math.Pow(row[j] - means[j], 2)) / inputs.Length);
+                    foldSize = totalItems - start; // Adjust fold size to prevent going out of bounds
                 }
+
+                // Allocate the current fold
+                List<LiverPatientRecord> currentFold = shuffledData.GetRange(start, foldSize);
+                folds.Add(currentFold);
+                start += foldSize; // Move the start pointer
             }
 
-            // Scale features, except for the gender
-            double[][] scaledInputs = inputs.Select(row =>
-                row.Select((value, index) =>
-                    index == genderIndex ? value : (value - means[index]) / stdDevs[index]
-                ).ToArray()
-            ).ToArray();
-
-            return scaledInputs;
+            return folds;
         }
 
 

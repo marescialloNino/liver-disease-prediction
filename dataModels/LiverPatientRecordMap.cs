@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿
 using CsvHelper.Configuration;
 using CsvHelper.TypeConversion;
 using CsvHelper;
@@ -12,7 +8,7 @@ namespace liver_disease_prediction.dataModels
     // This class is needed to map the csv rows into the LiverPatientRecord class with the right naming
     // convention. Handling missing values in the record.
 
-    public sealed class LiverPatientRecordMap : ClassMap<LiverPatientRecord>
+    public class LiverPatientRecordMap : ClassMap<LiverPatientRecord>
     {
         public LiverPatientRecordMap()
         {

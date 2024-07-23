@@ -1,34 +1,53 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿
+using Accord.Statistics.Analysis;
 using liver_disease_prediction.dataModels;
 
 namespace liver_disease_prediction.MachineLearningModels
 {
+
+    /// <summary>
+    /// Abstract base class for all machine learning models. 
+    /// This class provides a common interface and shared functionality across different types of models.
+    /// </summary>
     public abstract class MachineLearningModel
     {
-        // Abstract method for training the model
-        public abstract void Train(List<LiverPatientRecord> records);
 
-        // Abstract method for making predictions
         public abstract int[] Predict(List<LiverPatientRecord> records);
 
-        // Concrete implementation of the Validate method that can be used by all derived classes
 
-        public double ComputeAccuracy(List<LiverPatientRecord> records, int[] predictions)
+        /// <summary>
+        /// Computes accuracy, precision, recall, and F1 score from the predictions made by the model compared to the actual data.
+        /// </summary>
+        /// <param name="records">A list of LiverPatientRecord instances containing the true data.</param>
+        /// <param name="predictions">An array of integer predictions made by the model where 1 indicates presence of disease and 0 indicates absence.</param>
+        /// <returns>A tuple containing accuracy, precision, recall, and F1 score as doubles.</returns>
+        public static (double accuracy, double precision, double recall, double f1Score) ComputeMetrics(List<LiverPatientRecord> records, int[] predictions)
         {
-            int correct = 0;
+            int tp = 0; // True Positives
+            int tn = 0; // True Negatives
+            int fp = 0; // False Positives
+            int fn = 0; // False Negatives
+
             int[] outputs = records.Select(r => r.Dataset).ToArray();
+
             for (int i = 0; i < predictions.Length; i++)
             {
-                if (predictions[i] == outputs[i])
-                {
-                    correct++;
-                }
+                if (predictions[i] == 1 && outputs[i] == 1)
+                    tp++;
+                else if (predictions[i] == 0 && outputs[i] == 0)
+                    tn++;
+                else if (predictions[i] == 1 && outputs[i] == 0)
+                    fp++;
+                else if (predictions[i] == 0 && outputs[i] == 1)
+                    fn++;
             }
-            return (double)correct / predictions.Length;
+
+            double accuracy = (double)(tp + tn) / predictions.Length;
+            double precision = tp == 0 ? 0 : (double)tp / (tp + fp);
+            double recall = tp == 0 ? 0 : (double)tp / (tp + fn);
+            double f1Score = precision + recall == 0 ? 0 : 2 * (precision * recall) / (precision + recall);
+
+            return (accuracy, precision, recall, f1Score);
         }
     }
 }
