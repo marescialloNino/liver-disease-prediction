@@ -142,5 +142,28 @@ namespace liver_disease_prediction.utility
 
             return covariance / (stdX * stdY);
         }
+
+        /// <summary>
+        /// Calculates a percentile of the given data.
+        /// </summary>
+        /// <param name="data">List of double values to calculate the percentile for.</param>
+        /// <param name="percentile">The percentile to calculate (0-100).</param>
+        /// <returns>The calculated percentile value.</returns>
+        public static double CalculatePercentile(List<double> data, double percentile)
+        {
+            List<double> sortedData = new List<double>(data);
+            sortedData.Sort();
+            int N = sortedData.Count;
+            double n = (N - 1) * percentile / 100 + 1;
+
+            if (n == 1d) return sortedData[0];
+            else if (n == N) return sortedData[N - 1];
+            else
+            {
+                int k = (int)n;
+                double d = n - k;
+                return sortedData[k - 1] + d * (sortedData[k] - sortedData[k - 1]);
+            }
+        }
     } 
 }

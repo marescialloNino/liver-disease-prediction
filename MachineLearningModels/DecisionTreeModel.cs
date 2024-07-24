@@ -7,6 +7,9 @@ using Accord.MachineLearning.Performance;
 using Accord.Math.Optimization.Losses;
 using Accord.Statistics.Analysis;
 using liver_disease_prediction.utility;
+using System.Collections.Generic;
+using System.Linq;
+using System;
 
 namespace liver_disease_prediction.MachineLearningModels
 {
@@ -48,13 +51,11 @@ namespace liver_disease_prediction.MachineLearningModels
             // Use the learning algorithm to induce the tree
             Tree = teacher.Learn(inputs, outputs);
         }
-
         public override int[] Predict(List<LiverPatientRecord> records)
         {
             (double[][] inputs, _) = DataUtility.recordsToInputsOutputs(records);
             return Tree.Decide(inputs);
         }
-
 
         /// Performs k-fold cross-validation with hyperparameter tuning and evaluates model performance using a confusion matrix.
         /// </summary>

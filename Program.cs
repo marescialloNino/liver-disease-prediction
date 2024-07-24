@@ -7,6 +7,17 @@ using Accord.Statistics.Models.Regression;
 using liver_disease_prediction.dataModels;
 using liver_disease_prediction.MachineLearningModels;
 using liver_disease_prediction.utility;
+using Accord.MachineLearning.DecisionTrees;
+using Accord.MachineLearning.DecisionTrees.Learning;
+using liver_disease_prediction.dataModels;
+using Accord.MachineLearning;
+using Accord.MachineLearning.Performance;
+using Accord.Math.Optimization.Losses;
+using Accord.Statistics.Analysis;
+using liver_disease_prediction.utility;
+using System.Collections.Generic;
+using System.Linq;
+using System;
 
 internal class Program
 {
@@ -78,7 +89,7 @@ internal class Program
 
         IKernel[] kernels = new IKernel[] {new Gaussian(), new Linear(), new ChiSquare()};
 
-        double[] complexities = new double[] {1e-10, 1e-7, 1e-4};
+        double[] complexities = new double[] {1e-10, 1e-7, 1e-4, 1e-2};
 
         (IKernel bestKernel, double bestComplexity, double[] svmMetrics) = svm.CrossValidation(folds, kernels, complexities);
 

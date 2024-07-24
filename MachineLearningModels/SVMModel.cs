@@ -6,6 +6,17 @@ using liver_disease_prediction.dataModels;
 using Accord.MachineLearning.Performance;
 using Accord.Math.Optimization.Losses;
 using liver_disease_prediction.utility;
+using Accord.MachineLearning.DecisionTrees;
+using Accord.MachineLearning.DecisionTrees.Learning;
+using liver_disease_prediction.dataModels;
+using Accord.MachineLearning;
+using Accord.MachineLearning.Performance;
+using Accord.Math.Optimization.Losses;
+using Accord.Statistics.Analysis;
+using liver_disease_prediction.utility;
+using System.Collections.Generic;
+using System.Linq;
+using System;
 
 namespace liver_disease_prediction.MachineLearningModels
 {
@@ -18,6 +29,7 @@ namespace liver_disease_prediction.MachineLearningModels
         public void Train(List<LiverPatientRecord> records, IKernel kernel, double complexity)
         {
             double[][] inputs = records.Select(r => r.SelectedFeaturesArray()).ToArray();
+            double[][] preprocessedInputs = DataUtility.PreprocessFeatures(inputs);
             int[] outputs = records.Select(r => r.Dataset == 1 ? 1 : -1).ToArray(); // SVM in Accord.NET expects -1 or 1 for binary classes
 
             // Set up the learning algorithm
@@ -27,7 +39,7 @@ namespace liver_disease_prediction.MachineLearningModels
                 Complexity = complexity
             };
 
-            Svm = learn.Learn(inputs, outputs);
+            Svm = learn.Learn(preprocessedInputs, outputs);
 
         }
 

@@ -8,7 +8,17 @@ using Accord.MachineLearning;
 using Accord.Statistics.Analysis;
 using liver_disease_prediction.utility;
 using System.Collections.Generic;
-
+using Accord.MachineLearning.DecisionTrees;
+using Accord.MachineLearning.DecisionTrees.Learning;
+using liver_disease_prediction.dataModels;
+using Accord.MachineLearning;
+using Accord.MachineLearning.Performance;
+using Accord.Math.Optimization.Losses;
+using Accord.Statistics.Analysis;
+using liver_disease_prediction.utility;
+using System.Collections.Generic;
+using System.Linq;
+using System;
 
 namespace liver_disease_prediction.MachineLearningModels
 {
@@ -34,6 +44,8 @@ namespace liver_disease_prediction.MachineLearningModels
         {
             (double[][] inputs, int[] outputs) = DataUtility.recordsToInputsOutputs(records);
 
+            double[][] preprocessedInputs = DataUtility.PreprocessFeatures(inputs);
+
             LogRegModel.Intercept = intercept;
 
             IterativeReweightedLeastSquares<LogisticRegression> teacher = new IterativeReweightedLeastSquares<LogisticRegression>()
@@ -43,7 +55,7 @@ namespace liver_disease_prediction.MachineLearningModels
             };
 
 
-            LogRegModel = teacher.Learn(inputs, outputs);
+            LogRegModel = teacher.Learn(preprocessedInputs, outputs);
 
         }
 

@@ -2,6 +2,7 @@
 using CsvHelper.Configuration;
 using CsvHelper.TypeConversion;
 using CsvHelper;
+using System;
 
 namespace liver_disease_prediction.dataModels
 {

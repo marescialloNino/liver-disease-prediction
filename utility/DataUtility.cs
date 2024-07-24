@@ -2,7 +2,18 @@
 using CsvHelper.Configuration;
 using System.Globalization;
 using liver_disease_prediction.dataModels;
-
+using Accord.MachineLearning.DecisionTrees;
+using Accord.MachineLearning.DecisionTrees.Learning;
+using liver_disease_prediction.dataModels;
+using Accord.MachineLearning;
+using Accord.MachineLearning.Performance;
+using Accord.Math.Optimization.Losses;
+using Accord.Statistics.Analysis;
+using liver_disease_prediction.utility;
+using System.Collections.Generic;
+using System.Linq;
+using System;
+using System.IO;
 
 namespace liver_disease_prediction.utility
 {
@@ -152,6 +163,51 @@ namespace liver_disease_prediction.utility
 
             return folds;
         }
+
+        /// <summary>
+        /// Scales, normalizes, and caps outliers in the dataset.
+        /// </summary>
+        /// <param name="inputs">Array of feature arrays, where each inner array corresponds to a specific feature across all records.</param>
+        /// <returns>A new double[][] array where each feature has been scaled, normalized, and had its outliers capped.</returns>
+        public static double[][] PreprocessFeatures(double[][] inputs)
+        {
+            int numFeatures = inputs[0].Length;  
+            double[][] scaledInputs = new double[inputs.Length][];
+
+            for (int j = 0; j < numFeatures; j++)
+            {
+                double[] featureData = inputs.Select(x => x[j]).ToArray();
+                double mean = featureData.Average();
+                double stdDev = Math.Sqrt(featureData.Sum(x => Math.Pow(x - mean, 2)) / featureData.Length);
+
+                // Normalize feature data
+                double[] normalizedData = featureData.Select(x => (x - mean) / stdDev).ToArray();
+
+                // Calculate percentiles for outlier detection
+                double q1 = StatisticsUtility.CalculatePercentile(normalizedData.ToList(), 25);
+                double q3 = StatisticsUtility.CalculatePercentile(normalizedData.ToList(), 75);
+                double iqr = q3 - q1;
+                double lowerBound = q1 - 1.5 * iqr;
+                double upperBound = q3 + 1.5 * iqr;
+
+                // Cap outliers
+                double[] adjustedData = normalizedData.Select(x => Math.Min(Math.Max(x, lowerBound), upperBound)).ToArray();
+
+                // Assign adjusted data back to the scaled inputs
+                for (int i = 0; i < inputs.Length; i++)
+                {
+                    if (scaledInputs[i] == null)
+                        scaledInputs[i] = new double[numFeatures];
+
+                    scaledInputs[i][j] = adjustedData[i];
+                }
+            }
+
+            return scaledInputs;
+        }
+
+
+
 
 
     }
