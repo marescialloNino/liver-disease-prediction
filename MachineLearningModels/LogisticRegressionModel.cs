@@ -2,19 +2,6 @@
 using Accord.Statistics.Models.Regression.Fitting;
 using Accord.Statistics.Models.Regression;
 using liver_disease_prediction.dataModels;
-using Accord.MachineLearning.Performance;
-using Accord.Math.Optimization.Losses;
-using Accord.MachineLearning;
-using Accord.Statistics.Analysis;
-using liver_disease_prediction.utility;
-using System.Collections.Generic;
-using Accord.MachineLearning.DecisionTrees;
-using Accord.MachineLearning.DecisionTrees.Learning;
-using liver_disease_prediction.dataModels;
-using Accord.MachineLearning;
-using Accord.MachineLearning.Performance;
-using Accord.Math.Optimization.Losses;
-using Accord.Statistics.Analysis;
 using liver_disease_prediction.utility;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,9 +24,11 @@ namespace liver_disease_prediction.MachineLearningModels
 
 
         /// <summary>
-        /// Trains the logistic regression model using a list of liver patient records.
+        /// Trains the logistic regression model using a list of liver patient records, applying specified regularization and intercept.
         /// </summary>
         /// <param name="records">List of liver patient records to train the model.</param>
+        /// <param name="regularization">The regularization factor to use for training to prevent overfitting.</param>
+        /// <param name="intercept">The intercept to use for the logistic regression model.</param>
         public void Train(List<LiverPatientRecord> records, double regularization, double intercept)
         {
             (double[][] inputs, int[] outputs) = DataUtility.recordsToInputsOutputs(records);
@@ -75,11 +64,12 @@ namespace liver_disease_prediction.MachineLearningModels
         }
 
 
+        /// <summary>
         /// Performs k-fold cross-validation with hyperparameter tuning and evaluates model performance using a confusion matrix.
         /// </summary>
-        /// <param name="folds">A list of tuples each containing a training set and a validation set.</param>
+        /// <param name="foldedTrainSet">A list of lists each containing the k folds of the training set.</param>
         /// <param name="parameterRanges">Dictionary of parameters and their ranges to test.</param>
-        /// <returns>The best parameter combination along with averaged performance metrics.</returns>
+        /// <returns>The best parameter combination along with averaged performance metrics on training.</returns>
         public (double bestRegularization, double bestIntercept, double[] bestMetrics) CrossValidation(
             List<List<LiverPatientRecord>> foldedTrainSet,
             Dictionary<string, double[]> parameterRanges)

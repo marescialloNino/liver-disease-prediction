@@ -2,10 +2,6 @@
 using Accord.MachineLearning.DecisionTrees;
 using Accord.MachineLearning.DecisionTrees.Learning;
 using liver_disease_prediction.dataModels;
-using Accord.MachineLearning;
-using Accord.MachineLearning.Performance;
-using Accord.Math.Optimization.Losses;
-using Accord.Statistics.Analysis;
 using liver_disease_prediction.utility;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +16,9 @@ namespace liver_disease_prediction.MachineLearningModels
         private DecisionTree Tree { get; set; }
         private DecisionVariable[] Features { get; set; }
 
-
+        /// <summary>
+        /// Initializes a new instance of the DecisionTreeModel class with predefined features.
+        /// </summary>
         public DecisionTreeModel()
         {
             Features = new DecisionVariable[]
@@ -36,6 +34,13 @@ namespace liver_disease_prediction.MachineLearningModels
             Tree = new DecisionTree(Features, 2);
         }
 
+
+        /// <summary>
+        /// Trains the Decision Tree model with specified hyperparameters.
+        /// </summary>
+        /// <param name="records">Training data as a list of LiverPatientRecord.</param>
+        /// <param name="join">Parameter for C45 algorithm's minimum number of samples per leaf.</param>
+        /// <param name="maxHeight">Parameter for C45 algorithm's maximum height of the tree.</param>
         public void Train(List<LiverPatientRecord> records, double join, double maxHeight)
         {
 
@@ -51,17 +56,25 @@ namespace liver_disease_prediction.MachineLearningModels
             // Use the learning algorithm to induce the tree
             Tree = teacher.Learn(inputs, outputs);
         }
+
+        /// <summary>
+        /// Predicts outcomes for the given records using the trained Decision Tree model.
+        /// </summary>
+        /// <param name="records">List of LiverPatientRecord for which to predict outcomes.</param>
+        /// <returns>An array of integer predictions where each element corresponds to a record.</returns>
         public override int[] Predict(List<LiverPatientRecord> records)
         {
             (double[][] inputs, _) = DataUtility.recordsToInputsOutputs(records);
             return Tree.Decide(inputs);
         }
 
-        /// Performs k-fold cross-validation with hyperparameter tuning and evaluates model performance using a confusion matrix.
+        /// <summary>
+        /// Performs k-fold cross-validation with hyperparameter tuning and evaluates model performance.
+        /// It returns the best parameters found and their corresponding performance metrics.
         /// </summary>
-        /// <param name="folds">A list of lists each containing the k folds of the training set.</param>
-        /// <param name="parameterRanges">Dictionary of parameters and their ranges to test.</param>
-        /// <returns>The best parameter combination along with averaged performance metrics on training.</returns>
+        /// <param name="foldedTrainSet">List of data folds for cross-validation.</param>
+        /// <param name="parameterRanges">Dictionary with ranges for 'Join' and 'MaxHeight' parameters.</param>
+        /// <returns>Tuple containing the best join, best max height, and performance metrics (accuracy, precision, recall, f1).</returns>
         public (double bestJoin, double bestMaxHeight, double[] bestMetrics) CrossValidation(
             List<List<LiverPatientRecord>> foldedTrainSet,
             Dictionary<string, double[]> parameterRanges)

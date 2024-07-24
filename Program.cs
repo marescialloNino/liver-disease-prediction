@@ -87,9 +87,9 @@ internal class Program
 
         SVMModel svm = new SVMModel();
 
-        IKernel[] kernels = new IKernel[] {new Gaussian(), new Linear(), new ChiSquare()};
+        IKernel[] kernels = new IKernel[] { new Linear(), new ChiSquare()};
 
-        double[] complexities = new double[] {1e-10, 1e-7, 1e-4, 1e-2};
+        double[] complexities = new double[] {1e-7, 1e-4, 1e-2};
 
         (IKernel bestKernel, double bestComplexity, double[] svmMetrics) = svm.CrossValidation(folds, kernels, complexities);
 

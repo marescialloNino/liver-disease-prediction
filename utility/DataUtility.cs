@@ -2,14 +2,6 @@
 using CsvHelper.Configuration;
 using System.Globalization;
 using liver_disease_prediction.dataModels;
-using Accord.MachineLearning.DecisionTrees;
-using Accord.MachineLearning.DecisionTrees.Learning;
-using liver_disease_prediction.dataModels;
-using Accord.MachineLearning;
-using Accord.MachineLearning.Performance;
-using Accord.Math.Optimization.Losses;
-using Accord.Statistics.Analysis;
-using liver_disease_prediction.utility;
 using System.Collections.Generic;
 using System.Linq;
 using System;

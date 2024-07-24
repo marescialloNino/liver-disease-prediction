@@ -3,16 +3,6 @@ using Accord.Statistics.Kernels;
 using Accord.MachineLearning.VectorMachines.Learning;
 using Accord.MachineLearning.VectorMachines;
 using liver_disease_prediction.dataModels;
-using Accord.MachineLearning.Performance;
-using Accord.Math.Optimization.Losses;
-using liver_disease_prediction.utility;
-using Accord.MachineLearning.DecisionTrees;
-using Accord.MachineLearning.DecisionTrees.Learning;
-using liver_disease_prediction.dataModels;
-using Accord.MachineLearning;
-using Accord.MachineLearning.Performance;
-using Accord.Math.Optimization.Losses;
-using Accord.Statistics.Analysis;
 using liver_disease_prediction.utility;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,10 +12,18 @@ namespace liver_disease_prediction.MachineLearningModels
 {
     public class SVMModel
     {
+        public SupportVectorMachine<IKernel> Svm {  get; set; }
 
-        // with kernels is possible to produce non linear boundaries that perfectly separates the data
-        public SupportVectorMachine<IKernel> Svm {  get; set; } 
 
+        /// <summary>
+        /// Trains the SVM model using specified kernel and complexity parameter.
+        /// </summary>
+        /// <param name="records">List of liver patient records to train the model.</param>
+        /// <param name="kernel">The kernel function to use in the SVM.</param>
+        /// <param name="complexity">
+        /// The complexity parameter C, which helps in controlling the trade-off between 
+        /// achieving a low error on the training data and minimizing the norm of the weights.
+        /// </param>
         public void Train(List<LiverPatientRecord> records, IKernel kernel, double complexity)
         {
             double[][] inputs = records.Select(r => r.SelectedFeaturesArray()).ToArray();
@@ -43,6 +41,11 @@ namespace liver_disease_prediction.MachineLearningModels
 
         }
 
+        /// <summary>
+        /// Predicts disease presence for a list of liver patient records using the trained SVM model.
+        /// </summary>
+        /// <param name="records">The records to predict.</param>
+        /// <returns>An array of predictions where 1 indicates presence of disease and -1 indicates absence.</returns>
         public int[] Predict(List<LiverPatientRecord> records)
         {
             double[][] inputs = records.Select(r => r.SelectedFeaturesArray()).ToArray();
@@ -51,11 +54,14 @@ namespace liver_disease_prediction.MachineLearningModels
             return binaryPredictions;
         }
 
-        /// Performs k-fold cross-validation with hyperparameter tuning and evaluates model performance using a confusion matrix.
+
+        /// <summary>
+        /// Performs k-fold cross-validation with hyperparameter tuning and evaluates model performance.
         /// </summary>
-        /// <param name="folds">A list of lists each containing the k folds of the training set.</param>
-        /// <param name="parameterRanges">Dictionary of parameters and their ranges to test.</param>
-        /// <returns>The best parameter combination along with averaged performance metrics on training.</returns>
+        /// <param name="foldedTrainSet">A list of lists each containing the k-th fold of the training set.</param>
+        /// <param name="kernelRange">Array of different kernels to be tested during cross-validation.</param>
+        /// <param name="complexityRange">Array of different complexity values to be tested during cross-validation.</param>
+        /// <returns>The best kernel and complexity values along with the averaged performance metrics (accuracy, precision, recall, F1 score).</returns>
         public ( IKernel bestKernel, double bestComplexity, double[] bestMetrics) CrossValidation(
             List<List<LiverPatientRecord>> foldedTrainSet, IKernel[] kernelRange, double[] complexityRange)
         {

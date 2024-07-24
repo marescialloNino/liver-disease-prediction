@@ -1,4 +1,4 @@
-﻿
+﻿using System;
 
 namespace liver_disease_prediction.dataModels
 {
