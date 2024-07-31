@@ -11,7 +11,7 @@ namespace liver_disease_prediction.MachineLearningModels
 {
     public class LogisticRegressionModel:MachineLearningModel
     {
-        private LogisticRegression LogRegModel { get; set; }
+        public LogisticRegression LogRegModel { get; set; }
 
 
         /// <summary>
@@ -40,7 +40,8 @@ namespace liver_disease_prediction.MachineLearningModels
             IterativeReweightedLeastSquares<LogisticRegression> teacher = new IterativeReweightedLeastSquares<LogisticRegression>()
             {
                 Regularization = regularization,
-                MaxIterations = 100
+                MaxIterations = 100,
+                
             };
 
 

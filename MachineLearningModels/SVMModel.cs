@@ -31,13 +31,14 @@ namespace liver_disease_prediction.MachineLearningModels
             int[] outputs = records.Select(r => r.Dataset == 1 ? 1 : -1).ToArray(); // SVM in Accord.NET expects -1 or 1 for binary classes
 
             // Set up the learning algorithm
-            SequentialMinimalOptimization<IKernel> learn = new SequentialMinimalOptimization<IKernel>()
+            SequentialMinimalOptimization<IKernel> teacher = new SequentialMinimalOptimization<IKernel>()
             {
                 Kernel = kernel,
                 Complexity = complexity
-            };
 
-            Svm = learn.Learn(preprocessedInputs, outputs);
+            };     
+
+            Svm = teacher.Learn(preprocessedInputs, outputs);
 
         }
 
@@ -62,7 +63,7 @@ namespace liver_disease_prediction.MachineLearningModels
         /// <param name="kernelRange">Array of different kernels to be tested during cross-validation.</param>
         /// <param name="complexityRange">Array of different complexity values to be tested during cross-validation.</param>
         /// <returns>The best kernel and complexity values along with the averaged performance metrics (accuracy, precision, recall, F1 score).</returns>
-        public ( IKernel bestKernel, double bestComplexity, double[] bestMetrics) CrossValidation(
+        public ( IKernel bestKernel, double bestComplexity,double[] bestMetrics) CrossValidation(
             List<List<LiverPatientRecord>> foldedTrainSet, IKernel[] kernelRange, double[] complexityRange)
         {
 
@@ -91,51 +92,56 @@ namespace liver_disease_prediction.MachineLearningModels
             double bestF1 = 0.0;
             IKernel bestKernel = new Linear();
             double bestComplexity = 0.0;
+            
 
             foreach (IKernel kernel in kernelRange)
             {
-                foreach (double complexity in complexityRange)
-                {
-                    List<double> accuracies = new List<double>();
-                    List<double> precisions = new List<double>();
-                    List<double> recalls = new List<double>();
-                    List<double> f1Scores = new List<double>();
-
-                    for (int j = 0; j < tempTrainingSetsList.Count; j++)
+                
+                
+                    foreach (double complexity in complexityRange)
                     {
-                        Train(tempTrainingSetsList[j], kernel, complexity);
+                        List<double> accuracies = new List<double>();
+                        List<double> precisions = new List<double>();
+                        List<double> recalls = new List<double>();
+                        List<double> f1Scores = new List<double>();
 
-                        int[] validationSetPredictions = Predict(tempValidationSetsList[j]);
-                        (_, int[] validationSetOutputs) = DataUtility.recordsToInputsOutputs(tempValidationSetsList[j]);
+                        for (int j = 0; j < tempTrainingSetsList.Count; j++)
+                        {
+                            Train(tempTrainingSetsList[j], kernel, complexity);
+
+                            int[] validationSetPredictions = Predict(tempValidationSetsList[j]);
+                            (_, int[] validationSetOutputs) = DataUtility.recordsToInputsOutputs(tempValidationSetsList[j]);
 
 
-                        (double accuracy,
-                        double precision,
-                        double recall,
-                        double f1score) = MachineLearningModel.ComputeMetrics(tempValidationSetsList[j], validationSetPredictions);
-                        accuracies.Add(accuracy);
-                        precisions.Add(precision);
-                        recalls.Add(recall);
-                        f1Scores.Add(f1score);
+                            (double accuracy,
+                            double precision,
+                            double recall,
+                            double f1score) = MachineLearningModel.ComputeMetrics(tempValidationSetsList[j], validationSetPredictions);
+                            accuracies.Add(accuracy);
+                            precisions.Add(precision);
+                            recalls.Add(recall);
+                            f1Scores.Add(f1score);
+                        }
+
+                        double averageAccuracy = accuracies.Average();
+                        double averagePrecision = precisions.Average();
+                        double averageRecall = recalls.Average();
+                        double averageF1score = f1Scores.Average();
+
+
+                        if (averageF1score > bestF1)
+                        {
+                            bestAccuracy = averageAccuracy;
+                            bestPrecision = averagePrecision;
+                            bestRecall = averageRecall;
+                            bestF1 = averageF1score;
+                            bestKernel = kernel;
+                            bestComplexity = complexity;
+                            
+                        }
+
                     }
-
-                    double averageAccuracy = accuracies.Average();
-                    double averagePrecision = precisions.Average();
-                    double averageRecall = recalls.Average();
-                    double averageF1score = f1Scores.Average();
-
-
-                    if (averageF1score > bestF1)
-                    {
-                        bestAccuracy = averageAccuracy;
-                        bestPrecision = averagePrecision;
-                        bestRecall = averageRecall;
-                        bestF1 = averageF1score;
-                        bestKernel = kernel;
-                        bestComplexity = complexity;
-                    }
-
-                }
+                
 
 
             }
@@ -144,6 +150,7 @@ namespace liver_disease_prediction.MachineLearningModels
             Console.WriteLine("\nBest parameters after cross validation are:\n");
             Console.WriteLine($"Kernel: {bestKernel}");
             Console.WriteLine($"Complexity: {bestComplexity}");
+            
             Console.WriteLine("\nTraining set Metrics for best parameters:\n");
             Console.WriteLine($"Accuracy: {bestAccuracy} , Precision: {bestPrecision}");
             Console.WriteLine($"Recall: {bestRecall}, F1 score: {bestF1}");

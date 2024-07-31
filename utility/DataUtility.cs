@@ -13,26 +13,85 @@ namespace liver_disease_prediction.utility
     {
 
         /// <summary>
-        /// Loads liver patient records from a CSV file.
+        /// Reads a CSV file containing liver patient records and returns a list of records.
         /// </summary>
-        /// <param name="path">Path to the CSV file.</param>
-        /// <returns>List of LiverPatientRecord objects populated from the CSV data.</returns>
+        /// <param name="path">The file path of the CSV file.</param>
+        /// <returns>A List of LiverPatientRecord objects populated from the CSV data.</returns>
         public static List<LiverPatientRecord> LoadDataFromCsv(string path)
         {
-            string filePath = path;
-            CsvConfiguration config = new CsvConfiguration(CultureInfo.InvariantCulture)
+            var records = new List<LiverPatientRecord>();
+            string line;
+            using (var reader = new StreamReader(path))
             {
-                MissingFieldFound = null
-            };
+                // Read header line if there is one
+                reader.ReadLine();
 
-            using (StreamReader reader = new StreamReader(filePath))
+                while ((line = reader.ReadLine()) != null)
+                {
+                    var values = line.Split(',');
 
-            using (CsvReader csv = new CsvReader(reader, config))
+                    var record = new LiverPatientRecord
+                    {
+                        Age = int.Parse(values[0]),
+                        Gender = ConvertGender(values[1]),
+                        TotalBilirubin = double.Parse(values[2]),
+                        DirectBilirubin = double.Parse(values[3]),
+                        AlkalinePhosphotase = int.Parse(values[4]),
+                        AlamineAminotransferase = int.Parse(values[5]),
+                        AspartateAminotransferase = int.Parse(values[6]),
+                        TotalProtiens = double.Parse(values[7]),
+                        Albumin = double.Parse(values[8]),
+                        AlbuminAndGlobulinRatio = string.IsNullOrEmpty(values[9]) ? 0.95 : double.Parse(values[9]),
+                        Dataset = ConvertDataset(values[10])
+                    };
+                    records.Add(record);
+                }
+            }
+            return records;
+        }
+
+
+        /// <summary>
+        /// Converts a gender string to its corresponding integer value.
+        /// </summary>
+        /// <param name="gender">The gender as a string.</param>
+        /// <returns>The integer representation of the gender (0: "male" , 1: "female").</returns>
+        private static int ConvertGender(string gender)
+        {
+            string normalizedString = gender.Trim().ToLowerInvariant();
+
+            if(normalizedString == "male")
             {
-                csv.Context.RegisterClassMap<LiverPatientRecordMap>();
-                List<LiverPatientRecord> records = csv.GetRecords<LiverPatientRecord>().ToList();
+                return 0;
+            }
+            if (normalizedString == "female")
+            {
+                return 1;
+            }
+            else
+            {
+                throw new ArgumentException("Invalid gender value");
+            }
+        }
 
-                return records;
+        /// <summary>
+        /// Converts dataset strings into integers, specifically mapping '2' to '0' and '1' to '1'.
+        /// </summary>
+        /// <param name="dataset">The dataset value as a string.</param>
+        /// <returns>The mapped integer value of the dataset.</returns>
+        private static int ConvertDataset(string dataset)
+        {
+            if (int.Parse(dataset) == 1)
+            {
+                return 1;
+            }
+            if (int.Parse(dataset) == 2)
+            {
+                return 0;
+            }
+            else
+            {
+                throw new ArgumentException("Invalid dataset value");
             }
         }
 
@@ -80,6 +139,27 @@ namespace liver_disease_prediction.utility
             fieldData.Add("Dataset", datasetData);
 
             return fieldData;
+        }
+
+        /// <summary>
+        /// Scales and normalizes the feature data of liver patient records for visualization.
+        /// </summary>
+        /// <param name="records">List of LiverPatientRecord objects to process.</param>
+        /// <returns>Dictionary with feature names as keys and scaled, normalized list of doubles as values.</returns>
+        public static Dictionary<string, List<double>> GetScaledAndNormalizedData(List<LiverPatientRecord> records)
+        {
+            Dictionary<string, List<double>> fieldData = ExtractFieldDataAsDoubles(records);
+            Dictionary<string, List<double>> normalizedData = new Dictionary<string, List<double>>();
+
+            foreach (var entry in fieldData)
+            {
+                double mean = entry.Value.Average();
+                double stdDev = Math.Sqrt(entry.Value.Sum(x => Math.Pow(x - mean, 2)) / entry.Value.Count);
+                List<double> normalizedValues = entry.Value.Select(x => (x - mean) / stdDev).ToList();
+                normalizedData.Add(entry.Key, normalizedValues);
+            }
+
+            return normalizedData;
         }
 
 
@@ -197,9 +277,6 @@ namespace liver_disease_prediction.utility
 
             return scaledInputs;
         }
-
-
-
 
 
     }

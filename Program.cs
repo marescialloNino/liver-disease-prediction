@@ -40,15 +40,19 @@ internal class Program
 
         Dictionary<string, double[]> logRegParameterRanges = new Dictionary<string, double[]>
         {
-            { "Regularization", new double[] { 0.1, 0.001, 0.0 } },
-            { "Intercept", new double[] { 1.0, 2.0, 3.0 } }
+            { "Regularization", new double[] {1e-1, 1e-4, 1e-7} },
+            { "Intercept", new double[] { 0.0, 1.0, 2.0 } }
         };
 
         (double bestRegularization, double bestIntercept, double[] logRegMetrics) = logisticRegressionModel.CrossValidation(folds, logRegParameterRanges);
 
         logisticRegressionModel.Train(trainSet, bestRegularization, bestIntercept);
         int[] logRegPredictions = logisticRegressionModel.Predict(testSet);
+        
+
+
         (double accuracy, double precision, double recall, double f1Score) = MachineLearningModel.ComputeMetrics(testSet, logRegPredictions);
+        
 
         Console.WriteLine("\nTest set Metrics for best parameters:\n");
         Console.WriteLine($"Accuracy: {accuracy} , Precision: {precision}");
@@ -87,12 +91,13 @@ internal class Program
 
         SVMModel svm = new SVMModel();
 
-        IKernel[] kernels = new IKernel[] { new Linear(), new ChiSquare()};
+        IKernel[] kernels = new IKernel[] { new Gaussian(), new Linear(), new ChiSquare()};
 
-        double[] complexities = new double[] {1e-7, 1e-4, 1e-2};
+        double[] complexities = new double[] {1e-10, 1e-7, 1e-4};
+
 
         (IKernel bestKernel, double bestComplexity, double[] svmMetrics) = svm.CrossValidation(folds, kernels, complexities);
-
+        
 
         svm.Train(trainSet, bestKernel, bestComplexity);
         int[] svmPredictions = svm.Predict(testSet);
@@ -101,5 +106,7 @@ internal class Program
         Console.WriteLine("\nTest set Metrics for best parameters:\n");
         Console.WriteLine($"Accuracy: {svmaccuracy} , Precision: {svmprecision}");
         Console.WriteLine($"Recall: {svmrecall}, F1 score: {svmf1Score}");
+
+
     }
 }
