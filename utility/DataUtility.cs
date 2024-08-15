@@ -1,6 +1,4 @@
-﻿using CsvHelper;
-using CsvHelper.Configuration;
-using System.Globalization;
+﻿
 using liver_disease_prediction.dataModels;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,9 +26,9 @@ namespace liver_disease_prediction.utility
 
                 while ((line = reader.ReadLine()) != null)
                 {
-                    var values = line.Split(',');
+                    string[] values = line.Split(',');
 
-                    var record = new LiverPatientRecord
+                    LiverPatientRecord record = new LiverPatientRecord
                     {
                         Age = int.Parse(values[0]),
                         Gender = ConvertGender(values[1]),

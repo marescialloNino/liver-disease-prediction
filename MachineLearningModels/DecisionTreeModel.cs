@@ -6,7 +6,7 @@ using liver_disease_prediction.utility;
 using System.Collections.Generic;
 using System.Linq;
 using System;
-using Accord.Collections;
+
 
 namespace liver_disease_prediction.MachineLearningModels
 {
